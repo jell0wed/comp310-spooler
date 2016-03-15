@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/mman.h>
 
 #include "spooler.h"
