@@ -5,6 +5,9 @@
 
 #include "spooler.h"
 
+const char* KEY_FILE = "keyfile";
+const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
+
 int setup_shared_mem();
 shared_spooler_data* attach_share_mem(int fd);
 print_job create_print_job(print_client*, int );

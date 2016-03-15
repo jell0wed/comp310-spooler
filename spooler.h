@@ -35,7 +35,4 @@ typedef struct {
 void enqueue_job(shared_spooler_data*, print_job* );
 void dequeue_job(shared_spooler_data*, print_job* );
 
-const char* KEY_FILE = "keyfile";
-const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
-
 #endif //CODE_SPOOLER_OBJECTS_H
