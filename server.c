@@ -74,6 +74,8 @@ void initialized_shared_spooler() {
     sem_init(&(spooler->mutex), 1, 1);
     sem_init(&(spooler->empty_count), 1, JOBS_BUFFER_CAPACITY);
     sem_init(&(spooler->fill_count), 1, 0);
+
+    printf("Initialized spooler with capacity of %d jobs.", JOBS_BUFFER_CAPACITY);
     return;
 }
 
