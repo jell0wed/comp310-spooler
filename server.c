@@ -84,9 +84,9 @@ void initialized_shared_spooler() {
  * as a parameter
  */
 void detatch_shared_mem() {
-    sem_wait(spooler->mutex);
-    sem_wait(spooler->fill_count);
-    sem_wait(spooler->empty_count);
+    sem_wait(&(spooler->mutex));
+    sem_wait(&(spooler->fill_count));
+    sem_wait(&(spooler->empty_count));
 
     if(munmap(spooler, BUFF_BASE_SIZE) == -1) {
         perror("munmap() failed. Unable to free mmapped memory region.");
