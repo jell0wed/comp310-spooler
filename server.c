@@ -11,15 +11,22 @@ const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
 
 shared_spooler_data* setup_shared_mem();
 void initialized_shared_spooler(shared_spooler_data*);
-void detatch_shared_mem(shared_spooler_data*);
+void detatch_shared_mem();
 
 void take_a_job(shared_spooler_data*, print_job* );
 void output_job(print_job* );
 void go_sleep(print_job* );
 
+void server_spooler_cleanup(int );
+
+// gobals
+int fd;
+shared_spooler_data* spooler = 0;
+
 int main(int argc, const char* argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
-    shared_spooler_data* spooler = setup_shared_mem();
+    signal(SIGINT, server_spooler_cleanup);
+    spooler = setup_shared_mem();
 
     while(true) {
         print_job job;
@@ -29,7 +36,7 @@ int main(int argc, const char* argv[]) {
         go_sleep(&job);
     }
 
-    detatch_shared_mem(spooler);
+    detatch_shared_mem();
     return 0;
 }
 
@@ -38,7 +45,7 @@ int main(int argc, const char* argv[]) {
  */
 
 shared_spooler_data* setup_shared_mem() {
-    int fd = shm_open(KEY_FILE, O_CREAT | O_RDWR, 0666);
+    fd = shm_open(KEY_FILE, O_CREAT | O_RDWR, 0666);
     if(fd == -1) {
         perror("shm_open failed(). Unable to create nmap from appropriate key for shared memory");
         exit(1);
@@ -74,11 +81,18 @@ void initialized_shared_spooler(shared_spooler_data* spooler) {
  * Detach the current process from the shared memory instance pointed by a shared memory instance passed
  * as a parameter
  */
-void detatch_shared_mem(shared_spooler_data* smemPtr) {
+void detatch_shared_mem() {
     /*if(shmdt(smemPtr) == -1) {
         perror("Failed to detatch from shared memory instance (shmdt)");
         exit(1);
     }*/
+    if(munmap(spooler, BUFF_BASE_SIZE) == -1) {
+        perror("munmap() failed. Unable to free mmapped memory region.");
+        exit(1);
+    }
+
+    close(fd);
+    shm_unlink(KEY_FILE);
     return;
 }
 
@@ -113,4 +127,11 @@ void go_sleep(print_job* job) {
     }
     printf("\n");
     printf("Finished processing job Buffer[%d] submitted by client id %d. \n", job->position, job->submitted_by.id);
+}
+
+void server_spooler_cleanup(int sig) {
+    printf("Cleaning up and releasing the shared memory.");
+    if(spooler != 0) {
+        detatch_shared_mem();
+    }
 }

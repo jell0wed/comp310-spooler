@@ -12,6 +12,7 @@ int setup_shared_mem();
 shared_spooler_data* attach_share_mem(int fd);
 print_job create_print_job(print_client*, int );
 void put_job(print_client*, shared_spooler_data*, print_job* );
+void release_shared_mem(shared_spooler_data*);
 
 
 int main(int argc, const char* argv[]) {
