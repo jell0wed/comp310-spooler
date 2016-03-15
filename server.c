@@ -118,7 +118,7 @@ void output_job(print_job* job) {
  */
 void go_sleep(print_job* job) {
     int i;
-    for(i = 0; i < job->page_count; i++) {
+    for(i = 0; i < job->duration; i++) {
         printf(".");
         sleep(1);
     }
