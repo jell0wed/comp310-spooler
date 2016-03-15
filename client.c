@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "spooler.h"
 
@@ -12,8 +13,10 @@ int setup_shared_mem();
 shared_spooler_data* attach_share_mem(int fd);
 print_job create_print_job(print_client*, int , int);
 void put_job(print_client*, shared_spooler_data*, print_job* );
-void release_shared_mem(shared_spooler_data*);
+void release_shared_mem();
 
+int fd;
+shared_spooler_data* spooler;
 
 int main(int argc, const char* argv[]) {
     int client_id;
@@ -41,10 +44,12 @@ int main(int argc, const char* argv[]) {
     print_client client;
     client.id = client_id;
 
-    int fd = setup_shared_mem();
-    shared_spooler_data* spooler = attach_share_mem(fd);
+    fd = setup_shared_mem();
+    spooler = attach_share_mem(fd);
     print_job job = create_print_job(&client, num_pages, duration);
     put_job(&client, spooler, &job);
+
+    release_shared_mem();
 
     return 0;
 }
@@ -98,4 +103,13 @@ void put_job(print_client* client, shared_spooler_data* spooler, print_job* job)
            client->id,
            job->page_count,
            job->position);
+}
+
+void release_shared_mem()  {
+    if(munmap(spooler, BUFF_BASE_SIZE) == -1) {
+        perror("munmap() failed. Unable to detatch shared memory region.");
+    }
+
+    close(fd);
+
 }
