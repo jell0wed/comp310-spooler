@@ -86,7 +86,7 @@ void initialized_shared_spooler() {
 void detatch_shared_mem() {
     close(fd);
     shm_unlink(KEY_FILE);
-    return;
+    exit(0);
 }
 
 /** void take_a_job(shared_spooler_data*, print_job* );
