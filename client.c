@@ -10,7 +10,7 @@ const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
 
 int setup_shared_mem();
 shared_spooler_data* attach_share_mem(int fd);
-print_job create_print_job(print_client*, int );
+print_job create_print_job(print_client*, int , int);
 void put_job(print_client*, shared_spooler_data*, print_job* );
 void release_shared_mem(shared_spooler_data*);
 
@@ -18,18 +18,24 @@ void release_shared_mem(shared_spooler_data*);
 int main(int argc, const char* argv[]) {
     int client_id;
     int num_pages;
+    int duration;
 
-    if(argc < 3) {
-        perror("Invalid number of argument. Usage : ./client <client_id> <pages to print>");
+    if(argc < 4) {
+        perror("Invalid number of argument. Usage : ./client <client_id> <pages to print> <duration_in_sec>");
         exit(1);
     }
 
     client_id = atoi(argv[1]);
     num_pages = atoi(argv[2]);
+    duration = atoi(argv[3]);
 
     if(num_pages <= 0) {
         printf("You must specify a positive number of pages to print.");
         exit(1);
+    }
+
+    if(duration <= 0) {
+        printf("You must specify a positive number for the duration.");
     }
 
     print_client client;
@@ -37,7 +43,7 @@ int main(int argc, const char* argv[]) {
 
     int fd = setup_shared_mem();
     shared_spooler_data* spooler = attach_share_mem(fd);
-    print_job job = create_print_job(&client, num_pages);
+    print_job job = create_print_job(&client, num_pages, duration);
     put_job(&client, spooler, &job);
 
     return 0;
@@ -72,10 +78,11 @@ shared_spooler_data* attach_share_mem(int fd) {
 /** print_job create_print_job(print_client*, int)
  * Create a print_job with the specified parameters.
  */
-print_job create_print_job(print_client* client, int pagec) {
+print_job create_print_job(print_client* client, int pagec, int duration) {
     print_job j;
     j.page_count = pagec;
     j.submitted_by = *client;
+    j.duration = duration;
 
     return j;
 }

@@ -83,10 +83,6 @@ void initialized_shared_spooler(shared_spooler_data* spooler) {
  * as a parameter
  */
 void detatch_shared_mem() {
-    /*if(shmdt(smemPtr) == -1) {
-        perror("Failed to detatch from shared memory instance (shmdt)");
-        exit(1);
-    }*/
     if(munmap(spooler, BUFF_BASE_SIZE) == -1) {
         perror("munmap() failed. Unable to free mmapped memory region.");
         exit(1);
@@ -114,7 +110,7 @@ void output_job(print_job* job) {
             job->position,
             job->submitted_by.id,
             job->page_count,
-            job->page_count);
+            job->duration);
 }
 
 /** void go_sleep(print_job* )

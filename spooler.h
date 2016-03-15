@@ -21,6 +21,7 @@ typedef struct {
 typedef struct {
     int page_count;
     int position;
+    int duration;
     print_client submitted_by;
 } print_job;
 
