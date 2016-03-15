@@ -84,14 +84,6 @@ void initialized_shared_spooler() {
  * as a parameter
  */
 void detatch_shared_mem() {
-    sem_close(&(spooler->mutex));
-    sem_close(&(spooler->fill_count));
-    sem_close(&(spooler->empty_count));
-    if(munmap(spooler, BUFF_BASE_SIZE) == -1) {
-        perror("munmap() failed. Unable to free mmapped memory region.");
-        exit(1);
-    }
-
     close(fd);
     shm_unlink(KEY_FILE);
     return;
