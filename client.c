@@ -95,7 +95,7 @@ print_job create_print_job(print_client* client, int pagec, int duration) {
  * Enqueue the given job in the spooler buffer.
  */
 void put_job(print_client* client, print_job* job) {
-    printf("Waiting for server; queue is full. \n");
+    printf("Client %d is waiting for server; queue is full. \n", client->id);
     enqueue_job(spooler, job);
 
     printf("Client %d has %d pages to print. Puts request in Buffer[%d]\n",
