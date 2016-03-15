@@ -1,17 +1,12 @@
-#include <stdlib.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
 #include "spooler.h"
 
-const char* KEY_FILE = "keyfile";
-const size_t BUFF_SIZE = sizeof(shared_spooler_data);
-int errno;
-
-int setup_shared_mem();
-shared_spooler_data* attach_shared_mem(int fd);
+shared_spooler_data* setup_shared_mem();
 void initialized_shared_spooler(shared_spooler_data*);
 void detatch_shared_mem(shared_spooler_data*);
 
@@ -21,17 +16,13 @@ void go_sleep(print_job* );
 
 int main(int argc, const char* argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
-
-    int fd = setup_shared_mem();
-    shared_spooler_data* spooler = attach_shared_mem(fd);
-    initialized_shared_spooler(spooler);
+    shared_spooler_data* spooler = setup_shared_mem();
 
     while(true) {
         print_job job;
         take_a_job(spooler, &job);
 
         output_job(&job);
-
         go_sleep(&job);
     }
 
@@ -39,41 +30,39 @@ int main(int argc, const char* argv[]) {
     return 0;
 }
 
-/** setup_shared_mem()
- * Sets up the shared memory shared with the clients that contains the jobs buffer
- * for the pinter spooler
+/** setup_shared_mem(int )
+ * Sets up the IPC shared memory with the appropriate key file. The dynamic job buffer size is passed as parameter.
  */
 
-int setup_shared_mem() {
+shared_spooler_data* setup_shared_mem() {
     int fd = shm_open(KEY_FILE, O_CREAT | O_RDWR, 0666);
     if(fd == -1) {
-        printf("%d", errno);
-        perror("Failed to create nmap from appropriate key for shared memory");
+        perror("shm_open failed(). Unable to create nmap from appropriate key for shared memory");
         exit(1);
     }
 
-    ftruncate(fd, BUFF_SIZE);
-    return fd;
-}
+    ftruncate(fd, BUFF_BASE_SIZE);
 
-shared_spooler_data* attach_shared_mem(int fd) {
-    shared_spooler_data* smemPtr = (shared_spooler_data*) mmap(NULL, BUFF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shared_spooler_data* smemPtr = (shared_spooler_data*) mmap(NULL, BUFF_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(smemPtr == MAP_FAILED) {
-        perror("Failed to attach to shared memory");
+        perror("mmap() failed. Unable to attach to shared memory");
         exit(1);
     }
+
+    initialized_shared_spooler(smemPtr);
 
     return smemPtr;
 }
+
 
 /** void initialized_shared_spooler(shared_spooler_data*)
  * Initializes the shared spooler region to initial values
  */
 void initialized_shared_spooler(shared_spooler_data* spooler) {
     spooler->active_jobs_count = 0;
-    // initialize the semaphore
+    // semaphores setup
     sem_init(&(spooler->mutex), 1, 1);
-    sem_init(&(spooler->empty_count), 1, SPOOLER_MAX_JOBS_COUNT);
+    sem_init(&(spooler->empty_count), 1, JOBS_BUFFER_CAPACITY);
     sem_init(&(spooler->fill_count), 1, 0);
     return;
 }
@@ -94,7 +83,7 @@ void detatch_shared_mem(shared_spooler_data* smemPtr) {
  * Takes a job from the spooler
  * */
 void take_a_job(shared_spooler_data* spooler, print_job* job) {
-    printf("Waiting for job; buffer is empty.\n");
+    printf("Waiting for job-- print job buffer is empty.\n");
     dequeue_job(spooler, job);
     return;
 }
@@ -111,7 +100,7 @@ void output_job(print_job* job) {
 }
 
 /** void go_sleep(print_job* )
- * Make the server sleeps while processing a certain job
+ * "Process" the actual job. Puts the spooler to sleep for a specific amount of time.
  */
 void go_sleep(print_job* job) {
     int i;
