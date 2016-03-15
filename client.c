@@ -9,12 +9,13 @@
 const char* KEY_FILE = "keyfile";
 const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
 
-int setup_shared_mem();
-shared_spooler_data* attach_share_mem(int fd);
+void setup_shared_mem();
+void attach_share_mem();
 print_job create_print_job(print_client*, int , int);
-void put_job(print_client*, shared_spooler_data*, print_job* );
+void put_job(print_client*, print_job* );
 void release_shared_mem();
 
+// globals
 int fd;
 shared_spooler_data* spooler;
 
@@ -44,10 +45,10 @@ int main(int argc, const char* argv[]) {
     print_client client;
     client.id = client_id;
 
-    fd = setup_shared_mem();
-    spooler = attach_share_mem(fd);
+    setup_shared_mem();
+    attach_share_mem();
     print_job job = create_print_job(&client, num_pages, duration);
-    put_job(&client, spooler, &job);
+    put_job(&client, &job);
 
     release_shared_mem();
 
@@ -57,27 +58,25 @@ int main(int argc, const char* argv[]) {
 /** void setup_shared_mem()
  * Sets up the IPC shared memory region with the appropriate key.
  */
-int setup_shared_mem() {
-    int fd = shm_open(KEY_FILE, O_RDWR, 0666);
+void setup_shared_mem() {
+    fd = shm_open(KEY_FILE, O_RDWR, 0666);
     if(fd == -1) {
         perror("shm_open() failed. Unable to load appropriate key for shared memory");
         exit(1);
     }
-
-    return fd;
+    return;
 }
 
 /** shared_spooler_data* attach_share_mem();
  * Attach to shared server memory through IPC and valid keyfile
  */
-shared_spooler_data* attach_share_mem(int fd) {
-    shared_spooler_data* smemPtr = (shared_spooler_data*) mmap(NULL, BUFF_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if(smemPtr == MAP_FAILED) {
+void attach_share_mem() {
+    spooler = (shared_spooler_data*) mmap(NULL, BUFF_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if(spooler == MAP_FAILED) {
         perror("mmap() failed. Unable to attach to the shared memory region.");
         exit(1);
     }
-
-    return smemPtr;
+    return;
 }
 
 /** print_job create_print_job(print_client*, int)
@@ -95,7 +94,7 @@ print_job create_print_job(print_client* client, int pagec, int duration) {
 /** void put_job(print_client*, shared_spooler_data*, print_job* )
  * Enqueue the given job in the spooler buffer.
  */
-void put_job(print_client* client, shared_spooler_data* spooler, print_job* job) {
+void put_job(print_client* client, print_job* job) {
     printf("Waiting for server; queue is full. \n");
     enqueue_job(spooler, job);
 
@@ -111,5 +110,4 @@ void release_shared_mem()  {
     }
 
     close(fd);
-
 }

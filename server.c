@@ -10,11 +10,11 @@
 const char* KEY_FILE = "keyfile";
 const size_t BUFF_BASE_SIZE = sizeof(shared_spooler_data);
 
-shared_spooler_data* setup_shared_mem();
-void initialized_shared_spooler(shared_spooler_data*);
+void setup_shared_mem();
+void initialized_shared_spooler();
 void detatch_shared_mem();
 
-void take_a_job(shared_spooler_data*, print_job* );
+void take_a_job(print_job* );
 void output_job(print_job* );
 void go_sleep(print_job* );
 
@@ -27,11 +27,11 @@ shared_spooler_data* spooler = 0;
 int main(int argc, const char* argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
     signal(SIGINT, server_spooler_cleanup);
-    spooler = setup_shared_mem();
+    setup_shared_mem();
 
     while(true) {
         print_job job;
-        take_a_job(spooler, &job);
+        take_a_job(&job);
 
         output_job(&job);
         go_sleep(&job);
@@ -45,7 +45,7 @@ int main(int argc, const char* argv[]) {
  * Sets up the IPC shared memory with the appropriate key file. The dynamic job buffer size is passed as parameter.
  */
 
-shared_spooler_data* setup_shared_mem() {
+void setup_shared_mem() {
     fd = shm_open(KEY_FILE, O_CREAT | O_RDWR, 0666);
     if(fd == -1) {
         perror("shm_open failed(). Unable to create nmap from appropriate key for shared memory");
@@ -54,22 +54,21 @@ shared_spooler_data* setup_shared_mem() {
 
     ftruncate(fd, BUFF_BASE_SIZE);
 
-    shared_spooler_data* smemPtr = (shared_spooler_data*) mmap(NULL, BUFF_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if(smemPtr == MAP_FAILED) {
+    spooler = (shared_spooler_data*) mmap(NULL, BUFF_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if(spooler == MAP_FAILED) {
         perror("mmap() failed. Unable to attach to shared memory");
         exit(1);
     }
 
-    initialized_shared_spooler(smemPtr);
-
-    return smemPtr;
+    initialized_shared_spooler();
+    return;
 }
 
 
 /** void initialized_shared_spooler(shared_spooler_data*)
  * Initializes the shared spooler region to initial values
  */
-void initialized_shared_spooler(shared_spooler_data* spooler) {
+void initialized_shared_spooler() {
     spooler->active_jobs_count = 0;
     // semaphores setup
     sem_init(&(spooler->mutex), 1, 1);
@@ -96,7 +95,7 @@ void detatch_shared_mem() {
 /** void take_a_job(shared_spooler_data*, print_job* );
  * Takes a job from the spooler
  * */
-void take_a_job(shared_spooler_data* spooler, print_job* job) {
+void take_a_job(print_job* job) {
     printf("Waiting for job-- print job buffer is empty.\n");
     dequeue_job(spooler, job);
     return;
